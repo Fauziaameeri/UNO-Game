@@ -1,0 +1,734 @@
+import java.util.*;
+
+import java.util.ArrayList;
+
+import java.util.Random;
+
+class Main {
+
+ public static void main(String args[]) {
+
+ System.out.println("Starting UNO Game!");
+
+ System.out.println("Enter Number of Players: 2-4");
+
+ Scanner input = new Scanner(System.in);
+
+ int number = input.nextInt();
+
+ Game game = new Game();
+
+ while (number < 2 || number > 10) {
+
+ System.out.println("ONLY 2 TO 10 PLAYERS ARE ALLOWED!");
+
+ System.out.print("Please enter again: ");
+
+ number = input.nextInt();
+
+ }
+
+ for (int i = 0; i < number; i++) {
+
+ System.out.print("Player " + String.valueOf(i + 1) + ": ");
+
+ String name = input.next();
+
+ game.players.add(new Player(name));
+
+ }
+
+ game.dealHands();
+
+ Card startingCard = game.getDeck().dealStartingCard();
+
+ game.discardPile.add(startingCard);
+
+ System.out.println("The starting card of the game is: " + startingCard);
+
+ startingCard.specialAction(game);
+
+ while (!game.isOver()) {
+
+ Card lastPlayedCard = game.discardPile.get(game.discardPile.size() - 1);
+
+ Player currentPlayer = game.getCurrentPlayer();
+
+ int currentPlayerHandSize = currentPlayer.getHand().size();
+
+ System.out.println(currentPlayer + "'s turn: \nYou have the following cards in your hand.");
+
+ System.out.println("\n" + currentPlayer.getHand() + "\n");
+
+ System.out.println("What do you want to do? \n 1. Play a card \n 2. Draw a card");
+
+ int option = input.nextInt();
+
+ while (option < 1 || option > 2) {
+
+ option = input.nextInt();
+
+ }
+
+ switch (option) {
+
+ case 1:
+
+ System.out
+
+ .println("Please enter the index of the card you want to play. \n(Note: Index of the first card is 1)");
+
+ int cardIndex;
+
+ boolean isValidCard;
+
+ Card currentPlayerCard;
+
+ do {
+
+ cardIndex = input.nextInt() - 1;
+
+ while (cardIndex < 0 || cardIndex >= currentPlayerHandSize) {
+
+ System.out.println("Please enter a number ranging from 1 to " + currentPlayerHandSize);
+
+ cardIndex = input.nextInt() - 1;
+
+ }
+
+ currentPlayerCard = currentPlayer.getHand().get(cardIndex);
+
+ isValidCard = currentPlayerCard.match(lastPlayedCard);
+
+ if (!isValidCard) {
+
+ System.out.println(
+
+ "Please play a card that is either of the same color or same value as that of the last played card by the previous player. Or play a WILD or WILD DRAW FOUR card.");
+
+ System.out.println("Last played card is: " + lastPlayedCard);
+
+ }
+
+ } while (!isValidCard);
+
+ currentPlayerCard = currentPlayer.playCard(cardIndex);
+
+ game.discardPile.add(currentPlayerCard);
+
+ System.out.println(currentPlayer + " played " + currentPlayerCard);
+
+ if (currentPlayer.getHand().size() == 1) {
+
+ System.out.println(currentPlayer + " called UNO");
+
+ }
+
+ currentPlayerCard.specialAction(game);
+
+ break;
+
+ case 2:
+
+ Card drawnCard = game.deck.getCard(0);
+
+ System.out.println("You have drawn " + drawnCard);
+
+ currentPlayer.hand.add(drawnCard);
+
+ if (drawnCard.match(lastPlayedCard)) {
+
+ System.out.println("Do you want to play the card " + drawnCard + "? y/N");
+
+ String choice = input.next();
+
+ if (choice.equals("y")) {
+
+ currentPlayer.playCard(currentPlayerHandSize);
+
+ game.discardPile.add(drawnCard);
+
+ System.out.println(currentPlayer + " played " + drawnCard);
+
+ }
+
+ } else {
+
+ System.out.println("You can NOT play the card " + drawnCard);
+
+ }
+
+ break;
+
+ case 3:
+
+ if (currentPlayerHandSize == 1) {
+
+ System.out.println("Player " + currentPlayer + " called UNO");
+
+ } else {
+
+ System.out.println("You can NOT call UNO when you have more than 1 card in your hand.");
+
+ }
+
+ break;
+
+ default:
+
+ System.out.println("Invalid input");
+
+ break;
+
+ }
+
+ game.advanceTurn();
+
+ }
+
+ input.close();
+
+ }
+
+}
+
+class Card {
+
+ int value;
+
+ String color;
+ public void play() {
+
+ System.out.println(String.format("The card is %s", this));
+
+ }
+
+ public Card(int value, String color) {
+
+ this.value = value;
+
+ this.color = color;
+
+ }
+
+ public boolean match(Card card) {
+
+ boolean isSameColor = card.color.equals(this.color);
+
+ boolean isSameValue = card.value == this.value;
+
+ boolean isWild = card.value == 13 || card.value == 14 || this.value == 14 || this.value == 13;
+
+ if (isSameColor || isSameValue || isWild) {
+
+ return true;
+
+ } else {
+
+ return false;
+
+ }
+
+ }
+
+ public boolean specialAction(Game game) {
+
+ switch (this.value) {
+
+ case 10:
+
+ System.out.println("Player " + game.getNextPlayer() + "'s turn has been skipped!");
+
+ game.skipTurn();
+
+ return true;
+
+ case 11:
+
+ System.out.println("Player " + game.getNextPlayer() + "has to draw 2 cards!");
+
+ game.getNextPlayer().draw();
+
+ game.getNextPlayer().draw();
+
+ return true;
+
+ case 12:
+
+ game.reverse();
+
+ if (game.toLeft) {
+
+ System.out.println("The game is now going around in clockwise direction");
+
+ } else {
+
+ System.out.println("The game is now going around in counterclockwise direction");
+
+ }
+
+ return true;
+
+ case 14:
+
+ System.out.println("Player " + game.getNextPlayer() + "has to draw 4 cards!");
+
+ game.getNextPlayer().draw();
+
+ game.getNextPlayer().draw();
+
+ game.getNextPlayer().draw();
+
+ game.getNextPlayer().draw();
+
+ return true;
+
+ default:
+
+ return false;
+
+ }
+
+ }
+
+ public String toString() {
+
+ String val = "";
+
+ switch (this.value) {
+
+ case 10:
+
+ val = "-SKIP";
+
+ break;
+
+ case 11:
+
+ val = "-DRAW TWO";
+
+ break;
+
+ case 12:
+
+ val = "-REVERSE";
+
+ break;
+
+ case 13:
+
+ val = "WILD";
+
+ break;
+
+ case 14:
+
+ val = "WILD DRAW FOUR";
+
+ break;
+
+ default:
+
+ val = "-" + this.value;
+
+ break;
+
+ }
+
+ return this.color + val;
+
+ }
+
+}
+
+
+
+class Deck {
+
+ protected ArrayList<Card> deck;
+
+ protected int currentIndex;
+
+ private static Random rand = new Random();
+
+ protected static int[] cardNumbers = new int[] { 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11,
+
+ 11, 12, 12 };
+
+ protected static int[] wildCards = new int[] { 13, 14 };
+
+ protected static String[] colors = new String[] { "RED", "BLUE", "GREEN", "YELLOW" };
+
+ public Deck() {
+
+ this.deck = new ArrayList<>();
+
+ this.currentIndex = 0;
+
+ // TODO: fill deck with cards
+
+ for (int i : cardNumbers) {
+
+ for (String color : colors) {
+
+ Card card = new Card(i, color);
+
+ this.deck.add(card);
+
+ }
+
+ }
+
+ for (int i : wildCards) {
+
+ Card card = new Card(i, "");
+
+ this.deck.add(card);
+
+ }
+
+ }
+
+
+
+ public void shuffleDeck() {
+
+ for (int i = 0; i < this.deck.size(); i++) {
+
+ int randomIndexToSwap = rand.nextInt(this.deck.size());
+
+ Card temp = this.deck.get(randomIndexToSwap);
+
+ this.deck.set(randomIndexToSwap, this.deck.get(i));
+
+ this.deck.set(i, temp);
+
+ }
+
+ }
+
+ // Get a card at the given index in the deck.
+
+ public Card getCard(int index) {
+
+ Card card = this.deck.get(index);
+
+ this.deck.remove(index);
+
+ return card;
+
+ }
+
+ // Get a card at the given index in the deck.
+
+ public Card dealStartingCard() {
+
+ return this.getCard(0);
+
+ }
+
+
+
+ public boolean isEmpty() {
+
+ return this.deck.isEmpty();
+
+ }
+
+}
+
+class DiscardPile {
+
+ protected ArrayList<Card> discardPile;
+
+ public DiscardPile() {
+
+ this.discardPile = new ArrayList<>();
+
+ }
+
+ // Get a card at the given index in the discardPile.
+
+ public Card getCard(int index) {
+
+ return this.discardPile.get(index);
+
+ }
+
+}
+
+class Hand {
+
+ protected ArrayList<Card> hand;
+
+ public Hand() {
+
+ this.hand = new ArrayList<>();
+
+ }
+
+ public boolean addCard(Card card) {
+
+ return this.hand.add(card);
+
+ }
+
+ // Get a card at the given index in the hand.
+
+ public Card getCard(int index) {
+
+ return this.hand.get(index);
+
+ }
+
+ public boolean isEmpty() {
+
+ return this.hand.isEmpty();
+
+ }
+
+ public String toString() {
+
+ return hand.toString();
+
+ }
+
+}
+
+class Player {
+
+ String name;
+
+ ArrayList<Card> hand;
+
+ public Player(String name) {
+
+ this.name = name;
+
+ this.hand = new ArrayList<>();
+
+ }
+
+ public void draw() {
+
+ // player draws cards
+
+ }
+
+ public Card playCard(int index) {
+
+ // player plays card
+
+ Card card = this.hand.get(index);
+
+ this.hand.remove(index);
+
+ return card;
+
+ }
+
+ public void skip() {
+
+ // player skips turn
+
+ }
+
+ public boolean isTurn() {
+
+ // returns if it's player's turn
+
+ return false;
+
+ }
+
+ public ArrayList<Card> getHand() {
+
+ // returns player's hand
+
+ return this.hand;
+
+ }
+
+ public String getName() {
+
+ // get Player's name
+
+ return this.name;
+
+ }
+
+ public String toString() {
+
+ // get Player's name
+
+ return this.name;
+
+ }
+
+}
+
+class Game {
+
+ protected ArrayList<Player> players;
+
+ protected boolean toLeft;
+
+ protected Deck deck;
+
+ protected ArrayList<Card> discardPile;
+
+ protected int currentPlayer;
+
+ protected int startingCardsInHand = 7;
+
+ public Game() {
+
+ this.players = new ArrayList<>();
+
+ this.toLeft = true;
+
+ this.deck = new Deck();
+
+ this.deck.shuffleDeck();
+
+ this.deck.shuffleDeck();
+
+ this.deck.shuffleDeck();
+
+ this.discardPile = new ArrayList<>();
+
+ this.currentPlayer = 0;
+
+ }
+
+ public boolean addPlayer(Player player) {
+
+ return players.add(player);
+
+ }
+
+ public ArrayList<Player> getPlayers() {
+
+ return players;
+
+ }
+
+ public void dealHands() {
+
+ // deal hands
+
+ for (int i = 0; i < 7; i++) {
+
+ for (Player player : players) {
+
+ Card card = this.deck.getCard(0);
+
+ player.getHand().add(card);
+
+ }
+
+ }
+
+ }
+
+ public Deck getDeck() {
+
+ return this.deck;
+
+ }
+
+ public boolean checkPlayersHandsEmpty() {
+
+ for (Player player : players) {
+
+ if (player.getHand().isEmpty()) {
+
+ System.out.println("Player " + player.getName() + " is the winner!");
+
+ return true;
+
+ }
+
+ }
+
+ return false;
+
+ }
+
+
+
+ public Player getCurrentPlayer() {
+
+ return this.players.get(this.currentPlayer);
+
+ }
+
+ public Player getNextPlayer() {
+
+ return this.players.get(this.getNextPlayerIndex());
+
+ }
+
+ public boolean isOver() {
+
+ if (this.deck.isEmpty() || this.checkPlayersHandsEmpty()) {
+
+ return true;
+
+ } else {
+
+ return false;
+
+ }
+
+ }
+
+ public void advanceTurn() {
+
+ this.currentPlayer = getNextPlayerIndex();
+
+ }
+
+ public int getNextPlayerIndex() {
+
+ int nextPlayerIndex;
+
+ if (this.toLeft) {
+
+ nextPlayerIndex = this.currentPlayer - 1;
+
+ if (nextPlayerIndex < 0) {
+
+ nextPlayerIndex = this.players.size() - 1;
+
+ }
+
+ } else {
+
+ nextPlayerIndex = this.currentPlayer + 1;
+
+ if (nextPlayerIndex >= this.players.size()) {
+
+ nextPlayerIndex = 0;
+
+ }
+
+ }
+
+ return nextPlayerIndex;
+
+ }
+
+ public void skipTurn() {
+
+ this.advanceTurn();
+
+ }
+
+ public void reverse() {
+
+ this.toLeft = !this.toLeft;
+
+ }
+
+}
